@@ -1,8 +1,12 @@
-import { UploadVersionEntity, DeployStatusEntity, DeviceEntity, MapEntity, DeployStatusEnum, DeviceMapStateEntity, DeviceMapStateEnum } from '@app/common/database/entities';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { UploadVersionEntity, DeployStatusEntity, DeviceEntity, MapEntity, DeployStatusEnum, DeviceMapStateEntity, DeviceMapStateEnum, DeviceComponentStateEnum } from '@app/common/database/entities';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeployStatusDto } from '@app/common/dto/deploy';
 import { Repository } from 'typeorm';
+import { MicroserviceClient, MicroserviceName } from '@app/common/microservice-client';
+import { DeviceSoftwareStateDto } from '@app/common/dto/device/dto/device-software.dto';
+import { DeviceTopicsEmit } from '@app/common/microservice-client/topics';
+import { DeviceMapStateDto } from '@app/common/dto/device';
 
 @Injectable()
 export class DeployService {
@@ -13,7 +17,7 @@ export class DeployService {
     @InjectRepository(DeployStatusEntity) private readonly deployStatusRepo: Repository<DeployStatusEntity>,
     @InjectRepository(DeviceEntity) private readonly deviceRepo: Repository<DeviceEntity>,
     @InjectRepository(MapEntity) private readonly mapRepo: Repository<MapEntity>,
-    @InjectRepository(DeviceMapStateEntity) private readonly deviceMapRepo: Repository<DeviceMapStateEntity>,
+    @Inject(MicroserviceName.DISCOVERY_SERVICE) private readonly deviceClient: MicroserviceClient,
 
   ) { }
 
@@ -24,35 +28,79 @@ export class DeployService {
 
     let device = await this.deviceRepo.findOne({ relations: { maps: true }, where: { ID: dplStatus.deviceId } })
     if (!device) {
-      throw new NotFoundException('Device not found');
+      const newDevice = this.deviceRepo.create()
+      newDevice.ID = dplStatus.deviceId
+      device = await this.deviceRepo.save(newDevice)
+      this.logger.log(`A new device with Id - ${device.ID} has been registered`)
     }
     newStatus.device = device;
 
     const component = await this.uploadVersionRepo.findOneBy({ catalogId: dplStatus.catalogId });
     if (component) {
-      return this.deployStatusRepo.save(newStatus);
+      const isSaved =  await this.upsertDeployStatus(newStatus);
+      if (isSaved){
+        this.logger.log("Send device software state");
+        let state;
+        if (newStatus.deployStatus == DeployStatusEnum.DONE){
+          state = DeviceComponentStateEnum.INSTALLED;
+        }else if(newStatus.deployStatus == DeployStatusEnum.UNINSTALL){
+          state = DeviceComponentStateEnum.UNINSTALLED;
+        }else {
+          state = DeviceComponentStateEnum.DEPLOY;
+        }
+
+        let deviceState = new DeviceSoftwareStateDto();
+        deviceState.state = state;
+        deviceState.catalogId = dplStatus.catalogId;
+        deviceState.deviceId = dplStatus.deviceId;
+        this.deviceClient.emit(DeviceTopicsEmit.UPDATE_DEVICE_SOFTWARE_STATE, deviceState);
+      }
+
+      return isSaved
     }
 
     const map = await this.mapRepo.findOneBy({ catalogId: dplStatus.catalogId })
     if (map) {
-      const savedMap = await this.deployStatusRepo.save(newStatus)
-      
-      // TODO write test
-      let deviceMap = await this.deviceMapRepo.findOne({
-        where: {
-          device: { ID: device.ID },
-          map: { catalogId: map.catalogId },
-        }
-      });
-      if (deviceMap) {
-        this.logger.log(`Save state of map ${map.catalogId} for device ${device.ID}`)
-        deviceMap.state = DeviceMapStateEnum.INSTALLED
-      } else {
-        deviceMap = this.deviceMapRepo.create({ device, map, state: DeviceMapStateEnum.DELIVERY })
+      const isSaved =  await this.upsertDeployStatus(newStatus);
+      if (isSaved){
+        let state;
+        if (newStatus.deployStatus == DeployStatusEnum.DONE){
+          state = DeviceMapStateEnum.INSTALLED;
+        }else if(newStatus.deployStatus == DeployStatusEnum.UNINSTALL){
+          state = DeviceMapStateEnum.UNINSTALLED;
+        }else{
+          return
+        } 
+        this.logger.log("Send device map state")
+
+        let deviceState = new DeviceMapStateDto();
+        deviceState.state = state;
+        deviceState.catalogId = dplStatus.catalogId;
+        deviceState.deviceId = dplStatus.deviceId;
+        this.deviceClient.emit(DeviceTopicsEmit.UPDATE_DEVICE_MAP_STATE, deviceState);
       }
-      this.deviceMapRepo.save(deviceMap)
-      return savedMap;
+      return isSaved;
     }
     throw new NotFoundException(`Not found Item with this catalogId: ${dplStatus.catalogId}`);
+  }
+
+  private async upsertDeployStatus(newStatus: DeployStatusEntity): Promise<Boolean> {
+    let savedMap: any = await this.deployStatusRepo.createQueryBuilder()
+      .insert()
+      .values({ ...newStatus })
+      .orIgnore()
+      .execute()
+
+    if (savedMap?.raw?.length == 0) {
+      savedMap = await this.deployStatusRepo.createQueryBuilder()
+        .update()
+        .set({ ...newStatus })
+        .where("deviceID = :deviceID", { deviceID: newStatus.device.ID })
+        .andWhere("catalogId = :catalogId", { catalogId: newStatus.catalogId })
+        .andWhere("current_time < :current_time", { current_time: newStatus.currentTime })
+        .execute()
+    }
+
+    return savedMap?.raw?.length > 0 || savedMap.affected > 0
   }
 }
