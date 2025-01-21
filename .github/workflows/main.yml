@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - develop
-##
+###
 jobs:
   calculate_new_tag:
     runs-on: ubuntu-latest
