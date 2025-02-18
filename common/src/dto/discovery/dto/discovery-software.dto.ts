@@ -1,9 +1,7 @@
-import { UploadVersionEntity } from "@app/common/database/entities";
-import { IsValidStringFor } from "@app/common/validators";
-import { Pattern } from "@app/common/validators/regex.validator";
+import { DeviceComponentStateEnum, UploadVersionEntity } from "@app/common/database/entities";
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsSemVer, IsString, ValidateNested } from "class-validator";
 
 export class ComponentDto {
 
@@ -18,7 +16,7 @@ export class ComponentDto {
 
   @ApiProperty({required: false})
   @IsNotEmpty()
-  @IsValidStringFor(Pattern.VERSION)
+  @IsSemVer()
   versionNumber: string;
 
   @ApiProperty({required: false})
@@ -37,13 +35,13 @@ export class ComponentDto {
   category: string;
 
   @ApiProperty({required: false})
-  @IsValidStringFor(Pattern.VERSION)
+  @IsSemVer()
   @IsOptional()
   baseVersion: string;
 
   @ApiProperty({required: false})
   @IsOptional()
-  @IsValidStringFor(Pattern.VERSION)
+  @IsSemVer()
   prevVersion: string;
 
   @ApiProperty({required: false})
@@ -119,3 +117,46 @@ export class DiscoverySoftwareDto {
   @Type(() => PlatformDto)
   platform: PlatformDto;
 }
+
+export class ComponentStateDto{
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  catalogId: string;
+
+  @ApiProperty({enum: DeviceComponentStateEnum })
+  @IsEnum(DeviceComponentStateEnum)
+  state: DeviceComponentStateEnum;
+
+  @ApiProperty({required: false})
+  @IsOptional()
+  @IsString()
+  error?: string
+}
+
+export class DiscoverySoftwareV2Dto {
+
+  @ApiProperty({required: false})
+  @IsString({each: true})
+  @IsNotEmpty({each: true})
+  @IsArray()
+  @IsOptional()
+  formations: string[];
+
+  @ApiProperty({required: false})
+  @IsString({each: true})
+  @IsNotEmpty({each: true})
+  @IsArray()
+  @IsOptional()
+  platforms: string[];
+
+  @ApiProperty({required: false, isArray: true, type: ComponentStateDto})
+  @IsArray()
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ComponentStateDto)
+  components: ComponentStateDto[]
+}
+
+
+
