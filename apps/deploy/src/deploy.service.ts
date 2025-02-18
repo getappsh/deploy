@@ -1,10 +1,10 @@
-import { UploadVersionEntity, DeployStatusEntity, DeviceEntity, MapEntity, DeployStatusEnum, DeviceMapStateEntity, DeviceMapStateEnum, DeviceComponentStateEnum } from '@app/common/database/entities';
+import { DeployStatusEntity, DeviceEntity, MapEntity, DeployStatusEnum, DeviceMapStateEnum, DeviceComponentStateEnum, ReleaseEntity } from '@app/common/database/entities';
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeployStatusDto } from '@app/common/dto/deploy';
 import { Repository } from 'typeorm';
 import { MicroserviceClient, MicroserviceName } from '@app/common/microservice-client';
-import { DeviceSoftwareStateDto } from '@app/common/dto/device/dto/device-software.dto';
+import { DeviceComponentStateDto } from '@app/common/dto/device/dto/device-software.dto';
 import { DeviceTopicsEmit } from '@app/common/microservice-client/topics';
 import { DeviceMapStateDto } from '@app/common/dto/device';
 
@@ -13,7 +13,7 @@ export class DeployService {
   private readonly logger = new Logger(DeployService.name);
 
   constructor(
-    @InjectRepository(UploadVersionEntity) private readonly uploadVersionRepo: Repository<UploadVersionEntity>,
+    @InjectRepository(ReleaseEntity) private readonly releaseRepo: Repository<ReleaseEntity>,
     @InjectRepository(DeployStatusEntity) private readonly deployStatusRepo: Repository<DeployStatusEntity>,
     @InjectRepository(DeviceEntity) private readonly deviceRepo: Repository<DeviceEntity>,
     @InjectRepository(MapEntity) private readonly mapRepo: Repository<MapEntity>,
@@ -35,24 +35,27 @@ export class DeployService {
     }
     newStatus.device = device;
 
-    const component = await this.uploadVersionRepo.findOneBy({ catalogId: dplStatus.catalogId });
+    const component = await this.releaseRepo.findOneBy({ catalogId: dplStatus.catalogId });
     if (component) {
       const isSaved =  await this.upsertDeployStatus(newStatus);
+      this.logger.debug(`Is saved: ${isSaved}`)
       if (isSaved){
         this.logger.log("Send device software state");
-        let state;
-        if (newStatus.deployStatus == DeployStatusEnum.DONE){
-          state = DeviceComponentStateEnum.INSTALLED;
-        }else if(newStatus.deployStatus == DeployStatusEnum.UNINSTALL){
-          state = DeviceComponentStateEnum.UNINSTALLED;
-        }else {
-          state = DeviceComponentStateEnum.DEPLOY;
-        }
-
-        let deviceState = new DeviceSoftwareStateDto();
-        deviceState.state = state;
+        let deviceState = new DeviceComponentStateDto();
         deviceState.catalogId = dplStatus.catalogId;
         deviceState.deviceId = dplStatus.deviceId;
+
+        if (newStatus.deployStatus == DeployStatusEnum.DONE){
+          deviceState.state = DeviceComponentStateEnum.INSTALLED;
+        }else if(newStatus.deployStatus == DeployStatusEnum.UNINSTALL){
+          deviceState.state = DeviceComponentStateEnum.UNINSTALLED;
+        }else if(newStatus.deployStatus == DeployStatusEnum.ERROR){
+          deviceState.state = DeviceComponentStateEnum.DEPLOY;
+          deviceState.error = "Error";
+        }else {
+          deviceState.state = DeviceComponentStateEnum.DEPLOY;
+        }
+       
         this.deviceClient.emit(DeviceTopicsEmit.UPDATE_DEVICE_SOFTWARE_STATE, deviceState);
       }
 
