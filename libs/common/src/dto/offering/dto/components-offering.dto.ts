@@ -19,6 +19,10 @@ export class DeviceComponentsOfferingDto {
   @Type(() => ComponentV2Dto)
   push: ComponentV2Dto[]
 
+  toString(){
+    return JSON.stringify(this)
+  }
+
 }
 
 
@@ -32,7 +36,7 @@ export class ComponentOfferingRequestDto {
     const dto = new ComponentOfferingRequestDto();
     dto.deviceId = dis.general.physicalDevice.ID;
 
-    dto.components = dis?.softwareData?.components.map(comp => comp.catalogId);
+    dto.components = dis?.softwareData?.components?.map(comp => comp.catalogId);
     dto.formations = dis?.softwareData?.formations;
     dto.platforms = dis?.softwareData?.platforms;
     return dto
