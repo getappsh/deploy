@@ -44,6 +44,7 @@ export class DeployService {
         let deviceState = new DeviceComponentStateDto();
         deviceState.catalogId = dplStatus.catalogId;
         deviceState.deviceId = dplStatus.deviceId;
+        deviceState.deployedAt = dplStatus.deployDone ?? dplStatus.deployStart
 
         if (newStatus.deployStatus == DeployStatusEnum.DONE){
           deviceState.state = DeviceComponentStateEnum.INSTALLED;
@@ -66,20 +67,21 @@ export class DeployService {
     if (map) {
       const isSaved =  await this.upsertDeployStatus(newStatus);
       if (isSaved){
-        let state;
+        const deviceState = new DeviceMapStateDto();
+        deviceState.catalogId = dplStatus.catalogId;
+        deviceState.deviceId = dplStatus.deviceId;
+        deviceState.deployedAt = dplStatus.deployDone ?? dplStatus.deployStart
+
         if (newStatus.deployStatus == DeployStatusEnum.DONE){
-          state = DeviceMapStateEnum.INSTALLED;
+          deviceState.state = DeviceMapStateEnum.INSTALLED;
         }else if(newStatus.deployStatus == DeployStatusEnum.UNINSTALL){
-          state = DeviceMapStateEnum.UNINSTALLED;
+          deviceState.state = DeviceMapStateEnum.UNINSTALLED;
         }else{
           return
         } 
         this.logger.log("Send device map state")
 
-        let deviceState = new DeviceMapStateDto();
-        deviceState.state = state;
-        deviceState.catalogId = dplStatus.catalogId;
-        deviceState.deviceId = dplStatus.deviceId;
+        
         this.deviceClient.emit(DeviceTopicsEmit.UPDATE_DEVICE_MAP_STATE, deviceState);
       }
       return isSaved;
