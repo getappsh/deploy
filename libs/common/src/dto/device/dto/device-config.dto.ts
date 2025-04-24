@@ -117,17 +117,9 @@ export class BaseConfigDto{
 }
 
 
-export class WindowsConfigDto extends BaseConfigDto {
+export class WindowsConfigDto extends BaseConfigDto{
 
-  @ApiProperty({ required: false, type: [LayersConfigDto] }) // Specify type as a single object
-  @IsOptional()
-  @ValidateNested()
-  @IsArray()
-  @Type(() => LayersConfigDto)
-  @Expose()
-  layers: LayersConfigDto[];
-
-  constructor() {
+  constructor(){
     super();
     this.group = 'windows'
   }
