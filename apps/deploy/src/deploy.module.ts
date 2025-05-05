@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { DeployController } from './deploy.controller';
 import { DeployService } from './deploy.service';
 import { DatabaseModule } from '@app/common';
-import { UploadVersionEntity, DeployStatusEntity, DeviceEntity, MapEntity, DeviceMapStateEntity } from '@app/common/database/entities';
+import { DeployStatusEntity, DeviceEntity, MapEntity, ReleaseEntity } from '@app/common/database/entities';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from '@app/common/logger/logger.module';
 import { ApmModule } from '@app/common/apm/apm.module';
@@ -21,7 +21,7 @@ import { ConfigModule } from '@nestjs/config';
     ApmModule,
     DatabaseModule,
     TypeOrmModule.forFeature([
-      UploadVersionEntity, 
+      ReleaseEntity, 
       DeployStatusEntity,
       DeviceEntity,
       MapEntity
