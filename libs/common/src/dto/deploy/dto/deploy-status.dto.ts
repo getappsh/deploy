@@ -1,7 +1,7 @@
 import { ItemTypeEnum, DeployStatusEnum } from "@app/common/database/entities";
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsBoolean, IsDate, IsEnum, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsDate, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from "class-validator";
 
 export class DeployStatusDto {
 
@@ -46,6 +46,14 @@ export class DeployStatusDto {
   @ApiProperty({enum: DeployStatusEnum})
   @IsEnum(DeployStatusEnum)
   deployStatus: DeployStatusEnum
+
+
+  @ApiProperty({required: false, type: 'integer', format: 'int32', minimum: 0, maximum: 100})
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  progress: number;
 
   @ApiProperty({enum: ItemTypeEnum})
   @IsEnum(ItemTypeEnum)
