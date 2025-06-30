@@ -13,6 +13,7 @@ export const deployStatusDtoStub = (): DeployStatusDto => {
     deployEstimateTime: eStub.deployEstimateTime,
     currentTime: eStub.currentTime,
     deployStatus: eStub.deployStatus,
+    progress: eStub.progress,
     type: eStub.type,
   }
 }
