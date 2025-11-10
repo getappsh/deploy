@@ -10,27 +10,27 @@ import * as fs from 'fs';
 export class DeployController {
   private readonly logger = new Logger(DeployController.name);
 
-  constructor(private readonly deployService: DeployService) {}
+  constructor(private readonly deployService: DeployService) { }
 
   @EventPattern(DeployTopicsEmit.UPDATE_DEPLOY_STATUS)
   updateDeployStatus(@RpcPayload() data: DeployStatusDto) {
     this.deployService.updateDeployStatus(data).catch(e => {
-        this.logger.error(`Error update deploy status: ${e.message}`)
-      });
+      this.logger.error(`Error update deploy status: ${e.message}`)
+    });
   }
 
   @MessagePattern(DeployTopics.CHECK_HEALTH)
-  checkHealth(){
+  checkHealth() {
     const version = this.readImageVersion()
     this.logger.log(`Deploy service - Health checking, Version: ${version}`)
     return "Deploy service is success, Version: " + version
   }
 
-  private readImageVersion(){
+  private readImageVersion() {
     let version = 'unknown'
-    try{
-      version = fs.readFileSync('NEW_TAG.txt','utf8');
-    }catch(error){
+    try {
+      version = fs.readFileSync('deploy_image_version.txt', 'utf8');
+    } catch (error) {
       this.logger.error(`Unable to read image version - error: ${error}`)
     }
     return version
