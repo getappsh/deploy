@@ -15,5 +15,5 @@ export const deployStatusDtoStub = (): DeployStatusDto => {
     deployStatus: eStub.deployStatus,
     progress: eStub.progress,
     type: eStub.type,
-  }
+  } as DeployStatusDto
 }

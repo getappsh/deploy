@@ -17,7 +17,7 @@ async function bootstrap() {
         type: MicroserviceType.DEPLOY, 
         name: MicroserviceName.DEPLOY_SERVICE
       },
-      MSType[process.env.MICRO_SERVICE_TYPE]),
+      MSType[process.env.MICRO_SERVICE_TYPE ?? ""]),
       bufferLogs: true
     }
   );
