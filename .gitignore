@@ -40,3 +40,6 @@ temp_docker_images/*
 .gitlab-ci.yml
 
 manifest.json
+._.DS_Store
+libs/._.DS_Store
+test/._.DS_Store
