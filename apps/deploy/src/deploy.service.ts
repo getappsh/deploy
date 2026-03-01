@@ -108,4 +108,20 @@ export class DeployService {
 
     return savedMap?.raw?.length > 0 || savedMap.affected > 0
   }
+
+  // Get deploy statuses for a specific catalog
+  async getDeployStatuses(catalogId: string): Promise<DeployStatusEntity[]> {
+    this.logger.log(`Getting deploy statuses for catalogId: ${catalogId}`);
+    try {
+      const statuses = await this.deployStatusRepo.find({
+        where: { catalogId },
+        relations: ['device']
+      });
+      this.logger.debug(`Found ${statuses.length} deploy statuses for catalogId: ${catalogId}`);
+      return statuses;
+    } catch (error) {
+      this.logger.error(`Error getting deploy statuses for catalogId: ${catalogId}, error: ${error.message}`);
+      throw error;
+    }
+  }
 }

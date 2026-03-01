@@ -26,6 +26,17 @@ export class DeployController {
     return "Deploy service is success, Version: " + version
   }
 
+  @MessagePattern(DeployTopics.GET_DEPLOY_STATUSES)
+  async getDeployStatuses(@RpcPayload() data: any) {
+    this.logger.log(`Get deploy statuses for catalogId: ${data.catalogId}`);
+    try {
+      return await this.deployService.getDeployStatuses(data.catalogId);
+    } catch (error) {
+      this.logger.error(`Error getting deploy statuses: ${error.message}`);
+      return [];
+    }
+  }
+
   private readImageVersion() {
     let version = 'unknown'
     try {
